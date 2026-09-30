@@ -19,3 +19,4 @@ data:
   web:
     pageable:
       max-page-size: 20
+
