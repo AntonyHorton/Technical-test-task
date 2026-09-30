@@ -13,6 +13,7 @@ import taskservice.entity.Task;
 import taskservice.entity.TaskStatus;
 import taskservice.entity.User;
 import taskservice.exception.NotFoundException;
+import taskservice.kafka.publisher.TaskEventPublisher;
 import taskservice.repository.TaskRepository;
 import taskservice.repository.UserRepository;
 
@@ -22,6 +23,8 @@ public class TaskService {
 
     private final TaskRepository taskRepository;
     private final UserRepository userRepository;
+
+    private final TaskEventPublisher taskEventPublisher;
 
     private TaskDto toDto(Task task) {
         User user = task.getAssignee();
@@ -49,7 +52,9 @@ public class TaskService {
         Task task = new Task();
         task.setTitle(taskRequest.title());
         task.setDescription(taskRequest.description());
-        return toDto(taskRepository.save(task));
+        Task savedTask = taskRepository.save(task);
+        taskEventPublisher.taskCreated(savedTask);
+        return toDto(savedTask);
     }
 
     @Transactional
@@ -59,7 +64,8 @@ public class TaskService {
         User user = userRepository.findById(assigneeId)
                 .orElseThrow(()-> new NotFoundException("User not found with id " + assigneeId));
         task.setAssignee(user);
-        return toDto(taskRepository.save(task));
+        taskEventPublisher.taskAssigned(task, user);
+        return toDto(task);
     }
 
     @Transactional
